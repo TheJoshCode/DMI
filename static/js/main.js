@@ -320,10 +320,9 @@ async function loadLocalModelsIndex() {
         `).join('');
         container.querySelectorAll('.llm-select-btn').forEach(btn => {
             btn.addEventListener('click', () => {
-                document.querySelectorAll('.llm-model-row').forEach(r => r.classList.remove('selected'));
-                const row = container.querySelector(`.llm-model-row[data-path="${btn.dataset.path}"]`);
-                if (row) row.classList.add('selected');
+                // Set the path then immediately apply
                 document.getElementById('llm-apply-btn').dataset.selectedPath = btn.dataset.path;
+                applyLLMConfigIndex();
             });
         });
     } catch (e) { container.innerHTML = '<p class="empty-state">Error loading models.</p>'; }

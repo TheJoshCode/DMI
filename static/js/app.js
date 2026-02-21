@@ -578,25 +578,19 @@ async function loadLocalModels() {
         `).join('');
 
         container.querySelectorAll('.llm-select-btn').forEach(btn => {
-            btn.addEventListener('click', () => selectLocalModel(btn.dataset.path));
+            btn.addEventListener('click', () => {
+                // Set the path then immediately apply
+                document.getElementById('llm-apply-btn').dataset.selectedPath = btn.dataset.path;
+                applyLLMConfig();
+            });
         });
     } catch (e) {
         container.innerHTML = '<p class="empty-state">Error loading models.</p>';
     }
 }
 
-function selectLocalModel(path) {
-    // Highlight row, update hidden selected path
-    document.querySelectorAll('.llm-model-row').forEach(r => r.classList.remove('selected'));
-    const row = document.querySelector(`.llm-model-row[data-path="${path}"]`);
-    if (row) row.classList.add('selected');
-    // Store selection for Apply button
-    document.getElementById('llm-apply-btn').dataset.selectedPath = path;
-}
-
 async function applyLLMConfig() {
     const applyBtn = document.getElementById('llm-apply-btn');
-    const statusEl = document.getElementById('llm-apply-status');
 
     const modelPath = applyBtn.dataset.selectedPath
         || document.querySelector('.llm-model-row.active')?.dataset.path
@@ -605,6 +599,15 @@ async function applyLLMConfig() {
     if (!modelPath) {
         showApplyStatus('⚠ Please select a model first.', 'warn');
         return;
+    }
+
+    // Visually mark the target row as loading
+    document.querySelectorAll('.llm-model-row').forEach(r => r.classList.remove('selected'));
+    const targetRow = document.querySelector(`.llm-model-row[data-path="${modelPath}"]`);
+    if (targetRow) {
+        targetRow.classList.add('selected');
+        const btn = targetRow.querySelector('.llm-select-btn');
+        if (btn) { btn.disabled = true; btn.textContent = '⏳ Switching…'; }
     }
 
     const template = document.getElementById('llm-template-local').value;

@@ -16,7 +16,7 @@ mkdir -p models data/characters data/storyline data/chroma_db
 CONFIG_FILE="data/llm_config.json"
 
 DEFAULT_LLM_MODEL="models/nanbeige4.1-3b-q4_k_m.gguf"
-DEFAULT_CHAT_TEMPLATE="glm4"
+DEFAULT_CHAT_TEMPLATE="default"
 DEFAULT_CONTEXT=8192
 DEFAULT_GPU_LAYERS=0
 DEFAULT_PORT=8080

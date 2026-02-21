@@ -27,7 +27,7 @@ import uvicorn
 
 # Configuration
 CONFIG = {
-    "glm_server": "http://localhost:8080",  # GLM-4.7-Flash
+    "llm_server": "http://localhost:8080",  # GLM-4.7-Flash
     "embedding_server": "http://localhost:8081",  # Qwen3-Embedding
     "chroma_path": "./data/chroma_db",
     "max_context": 8192,
@@ -120,7 +120,7 @@ class DMState:
                 with open(LLM_CONFIG_PATH, 'r') as f:
                     saved = json.load(f)
                 self.llm_config.update(saved)
-                CONFIG["glm_server"] = f"http://localhost:{self.llm_config['server_port']}"
+                CONFIG["llm_server"] = f"http://localhost:{self.llm_config['server_port']}"
                 print(f"✓ LLM config loaded: {self.llm_config['model_path']}")
             except Exception as e:
                 print(f"⚠ Could not load LLM config: {e}")
@@ -170,7 +170,7 @@ class DMState:
             stderr=asyncio.subprocess.DEVNULL
         )
         self.llm_config["managed_by_backend"] = True
-        CONFIG["glm_server"] = f"http://localhost:{self.llm_config['server_port']}"
+        CONFIG["llm_server"] = f"http://localhost:{self.llm_config['server_port']}"
         self.save_llm_config()
         print(f"✓ LLM server started (PID {self.llm_process.pid})")
 
@@ -250,7 +250,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # ============== LLM Communication ==============
 
-async def generate_with_glm(
+async def llm_response(
     messages: List[Dict[str, str]],
     temperature: float = 0.7,
     max_tokens: int = 2048,
@@ -271,7 +271,7 @@ async def generate_with_glm(
     try:
         async with httpx.AsyncClient() as client:
             response = await client.post(
-                f"{CONFIG['glm_server']}/completion",
+                f"{CONFIG['llm_server']}/completion",
                 json=payload,
                 timeout=120.0
             )
@@ -386,7 +386,7 @@ async def get_llm_config():
     return {
         "config": state.llm_config,
         "chat_templates": CHAT_TEMPLATES,
-        "server_url": CONFIG["glm_server"],
+        "server_url": CONFIG["llm_server"],
         "managed_by_backend": state.llm_config.get("managed_by_backend", False),
         "process_running": state.llm_process is not None and state.llm_process.returncode is None
     }
@@ -404,7 +404,7 @@ async def update_llm_config(config: LLMConfigUpdate):
     state.llm_config["server_port"] = config.server_port
     state.save_llm_config()
 
-    CONFIG["glm_server"] = f"http://localhost:{config.server_port}"
+    CONFIG["llm_server"] = f"http://localhost:{config.server_port}"
 
     await state.start_llm_server()
     await asyncio.sleep(3)  # give server a moment to boot
@@ -412,7 +412,7 @@ async def update_llm_config(config: LLMConfigUpdate):
     return {
         "status": "success",
         "config": state.llm_config,
-        "server_url": CONFIG["glm_server"],
+        "server_url": CONFIG["llm_server"],
         "managed": state.llm_config.get("managed_by_backend", False)
     }
 
@@ -421,7 +421,7 @@ async def llm_status():
     """Check if the LLM server is reachable and healthy"""
     try:
         async with httpx.AsyncClient() as client:
-            resp = await client.get(f"{CONFIG['glm_server']}/health", timeout=5.0)
+            resp = await client.get(f"{CONFIG['llm_server']}/health", timeout=5.0)
             online = resp.status_code == 200
             detail = resp.json() if online else {}
     except Exception as e:
@@ -430,7 +430,7 @@ async def llm_status():
 
     return {
         "online": online,
-        "server_url": CONFIG["glm_server"],
+        "server_url": CONFIG["llm_server"],
         "model": os.path.basename(state.llm_config.get("model_path", "unknown")),
         "detail": detail,
         "process_running": state.llm_process is not None and state.llm_process.returncode is None
@@ -498,7 +498,7 @@ async def _download_model_task(url: str, dest_path: str, filename: str, auto_swi
             state.llm_config["model_path"] = dest_path
             state.llm_config["chat_template"] = chat_template
             state.save_llm_config()
-            CONFIG["glm_server"] = f"http://localhost:{state.llm_config['server_port']}"
+            CONFIG["llm_server"] = f"http://localhost:{state.llm_config['server_port']}"
             await state.start_llm_server()
     except Exception as e:
         prog["status"] = "error"
@@ -597,7 +597,7 @@ If any field is unclear, use reasonable defaults or empty strings."""
         {"role": "system", "content": "You are a D&D character sheet parser."},
         {"role": "user", "content": f"Parse this character sheet data (base64 image provided). {parse_prompt}\n\nImage data: data:image/png;base64,{base64_image[:100]}... [truncated]"}
     ]
-    parsed_text = await generate_with_glm(messages, temperature=0.1)
+    parsed_text = await llm_response(messages, temperature=0.1)
     try:
         json_match = re.search(r'\{.*\}', parsed_text, re.DOTALL)
         if json_match:
@@ -743,7 +743,7 @@ async def chat(request: ChatRequest):
         for msg in state.sessions[session_id][-5:]:
             messages.append({"role": msg.role, "content": msg.content})
 
-    response_text = await generate_with_glm(messages, temperature=0.8)
+    response_text = await llm_response(messages, temperature=0.8)
 
     dice_pattern = r'\[\[(\d+d\d+(?:[+-]\d+)?)\]\]'
     dice_rolls = []

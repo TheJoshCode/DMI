@@ -102,7 +102,7 @@ echo "🚀 Starting RAG/Embedding server (port 8081)..."
     --host 0.0.0.0 \
     --port 8081 \
     --embedding \
-    -ngl 999 &
+    -ngl 17 &
 EMBED_PID=$!
 
 echo "⏳ Waiting for servers to initialize..."

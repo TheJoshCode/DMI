@@ -7,6 +7,7 @@ let currentCharacter = null;
 let sessionId = null;
 let ws = null;
 let rollHistory = [];
+let turnCounter = 0;   // increments with every user message sent
 
 document.addEventListener('DOMContentLoaded', () => {
     initCharacter();
@@ -157,7 +158,10 @@ async function sendMessage() {
     const message = input.value.trim();
     if (!message) return;
 
-    addMessage('user', message);
+    const thisTurn = turnCounter;
+    turnCounter++;
+
+    addMessage('user', message, thisTurn);
     input.value = '';
     showTyping();
 
@@ -189,19 +193,44 @@ async function sendMessage() {
     }
 }
 
-function addMessage(role, content) {
+function addMessage(role, content, turnIndex = null) {
     const container = document.getElementById('chat-messages');
     const message = document.createElement('div');
     message.className = `message ${role}`;
+
+    // Tag user messages with their turn so rollback can find them
+    if (role === 'user' && turnIndex !== null) {
+        message.dataset.turn = turnIndex;
+        message.dataset.raw = content;   // plain text for restoring to input
+    }
+
     const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    content = content
+
+    const formatted = content
         .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
         .replace(/\*(.+?)\*/g, '<em>$1</em>')
         .replace(/\n/g, '<br>');
+
+    const rollbackBtn = (role === 'user' && turnIndex !== null)
+        ? `<button class="rollback-btn" title="Undo from here" aria-label="Rollback to this turn">↩</button>`
+        : '';
+
     message.innerHTML = `
-        <div class="message-content"><p>${content}</p></div>
+        <div class="message-content">
+            ${rollbackBtn}
+            <p>${formatted}</p>
+        </div>
         <span class="timestamp">${timestamp}</span>
     `;
+
+    // Wire the rollback button now that the element is in the DOM tree
+    if (role === 'user' && turnIndex !== null) {
+        message.querySelector('.rollback-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            rollbackToTurn(turnIndex, content);
+        });
+    }
+
     container.appendChild(message);
     container.scrollTop = container.scrollHeight;
 }
@@ -219,6 +248,52 @@ function showTyping() {
 function hideTyping() {
     const typing = document.getElementById('typing-indicator');
     if (typing) typing.remove();
+}
+
+// ============================================================
+// Rollback / Undo
+// ============================================================
+async function rollbackToTurn(turnIndex, originalText) {
+    const container = document.getElementById('chat-messages');
+
+    // Find the user message node for this turn
+    const targetNode = container.querySelector(`.message.user[data-turn="${turnIndex}"]`);
+    if (!targetNode) return;
+
+    // Collect this node + every sibling that comes after it
+    const toRemove = [];
+    let node = targetNode;
+    while (node) {
+        toRemove.push(node);
+        node = node.nextElementSibling;
+    }
+
+    // Brief flash animation before removing
+    toRemove.forEach(n => n.classList.add('rollback-fade'));
+
+    await new Promise(r => setTimeout(r, 280));   // match CSS transition
+
+    toRemove.forEach(n => n.remove());
+
+    // Adjust turn counter so next send gets the right index
+    turnCounter = turnIndex;
+
+    // Restore original text to input and focus
+    const input = document.getElementById('message-input');
+    input.value = originalText;
+    input.focus();
+    input.setSelectionRange(input.value.length, input.value.length);
+
+    // Tell the backend to truncate session history
+    try {
+        await fetch('/api/session/rollback', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ session_id: sessionId, turn_index: turnIndex })
+        });
+    } catch (e) {
+        console.warn('Rollback sync failed (session history may be out of sync):', e);
+    }
 }
 
 // ============================================================

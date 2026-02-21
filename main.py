@@ -131,21 +131,112 @@ class DMState:
         with open(LLM_CONFIG_PATH, 'w') as f:
             json.dump(self.llm_config, f, indent=2)
 
+    async def kill_llm_server(self):
+        """
+        Guaranteed kill of ANY llama-server on the configured port.
+
+        Three-stage approach:
+          1. SIGTERM our tracked subprocess (if we spawned it).
+          2. SIGKILL any remaining process owning the port via fuser / lsof / ss.
+          3. Wait up to 8 s for the port to go free before returning.
+        """
+        port = self.llm_config.get("server_port", 8080)
+
+        # ── Stage 1: kill the subprocess we own ──────────────────────────
+        if self.llm_process is not None:
+            pid = self.llm_process.pid
+            if self.llm_process.returncode is None:
+                print(f"🛑 Terminating tracked llama-server (PID {pid})…")
+                try:
+                    self.llm_process.terminate()          # SIGTERM first
+                    await asyncio.wait_for(self.llm_process.wait(), timeout=5.0)
+                    print(f"   ✓ PID {pid} exited cleanly")
+                except asyncio.TimeoutError:
+                    print(f"   ⚡ PID {pid} didn't exit – sending SIGKILL")
+                    self.llm_process.kill()
+                    try:
+                        await asyncio.wait_for(self.llm_process.wait(), timeout=5.0)
+                    except asyncio.TimeoutError:
+                        print(f"   ✗ PID {pid} still alive after SIGKILL (zombie?)")
+            self.llm_process = None
+
+        # ── Stage 2: kill ANY process (external) holding the port ────────
+        print(f"🔍 Checking for stray processes on port {port}…")
+        pids_killed: list[int] = []
+
+        # Try fuser first (Linux default)
+        try:
+            result = await asyncio.create_subprocess_exec(
+                "fuser", f"{port}/tcp",
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.DEVNULL,
+            )
+            stdout, _ = await result.communicate()
+            for raw_pid in stdout.decode().split():
+                try:
+                    p = int(raw_pid.strip())
+                    os.kill(p, 9)        # SIGKILL
+                    pids_killed.append(p)
+                    print(f"   🔪 fuser: killed PID {p} on port {port}")
+                except (ValueError, ProcessLookupError, PermissionError):
+                    pass
+        except FileNotFoundError:
+            pass  # fuser not available
+
+        # Fallback: lsof (macOS / some Linux)
+        if not pids_killed:
+            try:
+                result = await asyncio.create_subprocess_exec(
+                    "lsof", "-ti", f"tcp:{port}",
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.DEVNULL,
+                )
+                stdout, _ = await result.communicate()
+                for raw_pid in stdout.decode().split():
+                    try:
+                        p = int(raw_pid.strip())
+                        os.kill(p, 9)
+                        pids_killed.append(p)
+                        print(f"   🔪 lsof: killed PID {p} on port {port}")
+                    except (ValueError, ProcessLookupError, PermissionError):
+                        pass
+            except FileNotFoundError:
+                pass
+
+        # Last resort: pkill by binary name
+        if not pids_killed:
+            try:
+                await asyncio.create_subprocess_exec(
+                    "pkill", "-9", "-f", "llama-server",
+                    stdout=asyncio.subprocess.DEVNULL,
+                    stderr=asyncio.subprocess.DEVNULL,
+                )
+                print("   🔪 pkill -9 llama-server (fallback)")
+            except FileNotFoundError:
+                pass
+
+        # ── Stage 3: wait for the port to actually go free ───────────────
+        import socket
+        deadline = asyncio.get_event_loop().time() + 8.0
+        while asyncio.get_event_loop().time() < deadline:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.settimeout(0.3)
+                if s.connect_ex(("127.0.0.1", port)) != 0:
+                    print(f"   ✓ Port {port} is now free")
+                    return          # port is clear
+            await asyncio.sleep(0.4)
+        print(f"   ⚠ Port {port} still appears occupied after 8 s – proceeding anyway")
+
     async def start_llm_server(self):
-        """Start/restart llama-server with current LLM config"""
+        """Kill any existing llama-server then start a fresh one with current config."""
         llama_bin = "./llama.cpp/build/bin/llama-server"
         if not os.path.exists(llama_bin):
             print(f"⚠ llama-server binary not found at {llama_bin}. Skipping managed start.")
             self.llm_config["managed_by_backend"] = False
             return
 
-        if self.llm_process and self.llm_process.returncode is None:
-            print("🔄 Stopping existing LLM server...")
-            self.llm_process.kill()
-            try:
-                await asyncio.wait_for(self.llm_process.wait(), timeout=10.0)
-            except asyncio.TimeoutError:
-                pass
+        # Always kill first – covers both managed and externally-started servers
+        await self.kill_llm_server()
 
         model_path = self.llm_config["model_path"]
         if not os.path.exists(model_path):
@@ -250,7 +341,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # ============== LLM Communication ==============
 
-async def llm_response(
+async def generate_with_glm(
     messages: List[Dict[str, str]],
     temperature: float = 0.7,
     max_tokens: int = 2048,
@@ -407,7 +498,7 @@ async def update_llm_config(config: LLMConfigUpdate):
     CONFIG["llm_server"] = f"http://localhost:{config.server_port}"
 
     await state.start_llm_server()
-    await asyncio.sleep(3)  # give server a moment to boot
+    # kill_llm_server() already blocks until port is free, so no extra sleep needed
 
     return {
         "status": "success",
@@ -597,7 +688,7 @@ If any field is unclear, use reasonable defaults or empty strings."""
         {"role": "system", "content": "You are a D&D character sheet parser."},
         {"role": "user", "content": f"Parse this character sheet data (base64 image provided). {parse_prompt}\n\nImage data: data:image/png;base64,{base64_image[:100]}... [truncated]"}
     ]
-    parsed_text = await llm_response(messages, temperature=0.1)
+    parsed_text = await generate_with_glm(messages, temperature=0.1)
     try:
         json_match = re.search(r'\{.*\}', parsed_text, re.DOTALL)
         if json_match:
@@ -715,6 +806,25 @@ Always stay in character as the DM. Use second person ("you", "your") when addre
 
 Current context will be provided below."""
 
+class RollbackRequest(BaseModel):
+    session_id: str
+    turn_index: int  # 0-based index of the user turn to roll back to (removes it and everything after)
+
+@app.post("/api/session/rollback")
+async def rollback_session(req: RollbackRequest):
+    """
+    Truncate session history back to just before turn_index.
+    turn_index is 0-based: turn 0 = first user/assistant pair.
+    Each turn occupies 2 entries [user, assistant], so we keep req.turn_index * 2 entries.
+    """
+    sid = req.session_id
+    if sid not in state.sessions:
+        return {"status": "ok", "turns_remaining": 0}
+
+    keep = req.turn_index * 2          # entries to keep (everything before this turn)
+    state.sessions[sid] = state.sessions[sid][:keep]
+    return {"status": "ok", "turns_remaining": req.turn_index}
+
 @app.post("/api/chat", response_model=ChatResponse)
 async def chat(request: ChatRequest):
     char_path = f"./data/characters/{request.character_id}.json"
@@ -743,7 +853,7 @@ async def chat(request: ChatRequest):
         for msg in state.sessions[session_id][-5:]:
             messages.append({"role": msg.role, "content": msg.content})
 
-    response_text = await llm_response(messages, temperature=0.8)
+    response_text = await generate_with_glm(messages, temperature=0.8)
 
     dice_pattern = r'\[\[(\d+d\d+(?:[+-]\d+)?)\]\]'
     dice_rolls = []

@@ -15,6 +15,14 @@
             <h1 class="title">DM-I</h1>
             <p class="subtitle">Digital Master of Imaginative Realms</p>
             <div class="ornament"></div>
+            <!-- LLM status pill in header -->
+            <div class="header-llm-row">
+                <button id="llm-settings-btn-index" class="llm-pill-btn" title="LLM Settings">
+                    <span id="index-llm-dot" class="llm-dot-sm llm-dot-sm--checking">●</span>
+                    <span id="index-llm-label">LLM</span>
+                    <span class="llm-pill-cog">⚙️</span>
+                </button>
+            </div>
         </header>
 
         <main class="login-container">
@@ -141,8 +149,94 @@
         </main>
 
         <footer>
-            <p>Powered by GLM-4.7-Flash & Qwen3-Embedding</p>
+            <p>Powered by your chosen GGUF model &amp; Qwen3-Embedding</p>
         </footer>
+    </div>
+
+    <!-- LLM Settings modal (shared with app page) -->
+    <div id="llm-modal-overlay" class="llm-modal-overlay-index hidden">
+        <div class="modal llm-modal">
+            <div class="modal-header">
+                <h3>⚙️ LLM Settings</h3>
+                <button class="llm-modal-close modal-close">&times;</button>
+            </div>
+            <div class="modal-body llm-modal-body">
+                <div class="llm-status-bar" id="llm-status-bar">
+                    <span class="llm-dot llm-dot--checking" id="llm-modal-dot">●</span>
+                    <span id="llm-status-text">Checking LLM server…</span>
+                    <span id="llm-active-model" class="llm-active-model"></span>
+                </div>
+                <div class="llm-tabs">
+                    <button class="llm-tab-btn active" data-ltab="local">📁 Local Models</button>
+                    <button class="llm-tab-btn" data-ltab="download">⬇️ Download Model</button>
+                    <button class="llm-tab-btn" data-ltab="advanced">🔧 Advanced</button>
+                </div>
+                <div class="llm-tab-content active" id="ltab-local">
+                    <p class="llm-hint">Models found in <code>./models/</code> — click a model to activate it.</p>
+                    <div id="llm-model-list" class="llm-model-list">
+                        <p class="empty-state">Scanning models folder…</p>
+                    </div>
+                    <div class="llm-form-row">
+                        <label>Chat Template</label>
+                        <select id="llm-template-local"></select>
+                    </div>
+                    <div class="llm-form-row two-col">
+                        <div>
+                            <label>Context Size</label>
+                            <select id="llm-ctx-local">
+                                <option value="1024">1024</option>
+                                <option value="2048">2048</option>
+                                <option value="4096">4096</option>
+                                <option value="8192" selected>8192</option>
+                                <option value="16384">16384</option>
+                                <option value="32768">32768</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label>GPU Layers <small>(0 = CPU)</small></label>
+                            <input type="number" id="llm-gpu-local" value="0" min="0" max="999">
+                        </div>
+                    </div>
+                    <button id="llm-apply-btn" class="btn-primary llm-apply-btn">⚡ Apply &amp; Restart LLM</button>
+                    <div id="llm-apply-status" class="llm-apply-status hidden"></div>
+                </div>
+                <div class="llm-tab-content" id="ltab-download">
+                    <p class="llm-hint">Paste a direct download URL (e.g. HuggingFace <code>.gguf</code> link).</p>
+                    <div class="llm-form-row">
+                        <label>Download URL</label>
+                        <input type="url" id="dl-url" placeholder="https://huggingface.co/…/model.gguf?download=true">
+                    </div>
+                    <div class="llm-form-row">
+                        <label>Save as filename <small>(auto-detected)</small></label>
+                        <input type="text" id="dl-filename" placeholder="my-model.gguf">
+                    </div>
+                    <div class="llm-form-row">
+                        <label>Chat Template for this model</label>
+                        <select id="dl-template"></select>
+                    </div>
+                    <div class="llm-form-row llm-checkbox-row">
+                        <input type="checkbox" id="dl-autoswitch">
+                        <label for="dl-autoswitch">Auto-switch to this model when download completes</label>
+                    </div>
+                    <button id="dl-start-btn" class="btn-primary">⬇️ Start Download</button>
+                    <div id="dl-progress-list" class="dl-progress-list"></div>
+                </div>
+                <div class="llm-tab-content" id="ltab-advanced">
+                    <p class="llm-hint">Configure the LLM server connection manually.</p>
+                    <div class="llm-form-row">
+                        <label>LLM Server Port</label>
+                        <input type="number" id="adv-port" value="8080" min="1024" max="65535">
+                    </div>
+                    <div class="llm-form-row">
+                        <label>Full Server URL (read-only)</label>
+                        <input type="text" id="adv-url" readonly style="opacity:0.6">
+                    </div>
+                    <button id="adv-save-btn" class="btn-secondary">Save Port</button>
+                    <hr style="border-color:var(--border-color);margin:1.2rem 0">
+                    <button id="adv-refresh-btn" class="btn-secondary">🔄 Refresh Model List</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script src="/static/js/main.js"></script>

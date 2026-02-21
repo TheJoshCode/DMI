@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DM-I | AI Dungeon Master</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="background-animation"></div>
+    
+    <div class="container">
+        <header class="main-header">
+            <h1 class="title">DM-I</h1>
+            <p class="subtitle">Digital Master of Imaginative Realms</p>
+            <div class="ornament"></div>
+        </header>
+
+        <main class="login-container">
+            <div class="panel character-select">
+                <h2>Choose Your Path</h2>
+                
+                <div class="tabs">
+                    <button class="tab-btn active" data-tab="create">Create Character</button>
+                    <button class="tab-btn" data-tab="upload">Upload Sheet</button>
+                    <button class="tab-btn" data-tab="load">Load Existing</button>
+                </div>
+
+                <div id="create-tab" class="tab-content active">
+                    <form id="create-form" class="character-form">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="char-name">Character Name</label>
+                                <input type="text" id="char-name" required placeholder="Enter name...">
+                            </div>
+                            <div class="form-group">
+                                <label for="player-name">Player Name</label>
+                                <input type="text" id="player-name" required placeholder="Your name...">
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="char-class">Class</label>
+                                <select id="char-class" required>
+                                    <option value="">Select Class...</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="char-race">Race</label>
+                                <select id="char-race" required>
+                                    <option value="">Select Race...</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="char-background">Background</label>
+                                <input type="text" id="char-background" placeholder="e.g., Soldier, Sage...">
+                            </div>
+                            <div class="form-group">
+                                <label for="char-alignment">Alignment</label>
+                                <select id="char-alignment">
+                                    <option value="True Neutral">True Neutral</option>
+                                    <option value="Lawful Good">Lawful Good</option>
+                                    <option value="Neutral Good">Neutral Good</option>
+                                    <option value="Chaotic Good">Chaotic Good</option>
+                                    <option value="Lawful Neutral">Lawful Neutral</option>
+                                    <option value="Chaotic Neutral">Chaotic Neutral</option>
+                                    <option value="Lawful Evil">Lawful Evil</option>
+                                    <option value="Neutral Evil">Neutral Evil</option>
+                                    <option value="Chaotic Evil">Chaotic Evil</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="stats-section">
+                            <h3>Ability Scores</h3>
+                            <div class="stats-grid">
+                                <div class="stat-box">
+                                    <label>STR</label>
+                                    <input type="number" id="stat-str" value="10" min="1" max="20">
+                                </div>
+                                <div class="stat-box">
+                                    <label>DEX</label>
+                                    <input type="number" id="stat-dex" value="10" min="1" max="20">
+                                </div>
+                                <div class="stat-box">
+                                    <label>CON</label>
+                                    <input type="number" id="stat-con" value="10" min="1" max="20">
+                                </div>
+                                <div class="stat-box">
+                                    <label>INT</label>
+                                    <input type="number" id="stat-int" value="10" min="1" max="20">
+                                </div>
+                                <div class="stat-box">
+                                    <label>WIS</label>
+                                    <input type="number" id="stat-wis" value="10" min="1" max="20">
+                                </div>
+                                <div class="stat-box">
+                                    <label>CHA</label>
+                                    <input type="number" id="stat-cha" value="10" min="1" max="20">
+                                </div>
+                            </div>
+                            <button type="button" id="roll-stats" class="btn-secondary">Roll Stats (4d6 drop lowest)</button>
+                        </div>
+
+                        <div class="form-group full-width">
+                            <label for="char-backstory">Backstory</label>
+                            <textarea id="char-backstory" rows="4" placeholder="Tell us your tale..."></textarea>
+                        </div>
+
+                        <button type="submit" class="btn-primary">Begin Adventure</button>
+                    </form>
+                </div>
+
+                <div id="upload-tab" class="tab-content">
+                    <div class="upload-area" id="upload-area">
+                        <div class="upload-icon">📜</div>
+                        <p>Drop your character sheet here</p>
+                        <span>or click to browse</span>
+                        <input type="file" id="sheet-upload" accept="image/*,.pdf" hidden>
+                    </div>
+                    <div id="upload-preview" class="upload-preview hidden">
+                        <img id="preview-img" src="" alt="Preview">
+                        <div class="upload-actions">
+                            <input type="text" id="upload-player-name" placeholder="Your name" required>
+                            <button id="confirm-upload" class="btn-primary">Parse Character Sheet</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="load-tab" class="tab-content">
+                    <div id="characters-list" class="characters-list">
+                        <p class="empty-state">No saved characters found...</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <footer>
+            <p>Powered by GLM-4.7-Flash & Qwen3-Embedding</p>
+        </footer>
+    </div>
+
+    <script src="/static/js/main.js"></script>
+</body>
+</html>

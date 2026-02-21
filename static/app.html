@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DM-I | Adventure</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/app.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="background-animation"></div>
+    
+    <div class="app-container">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h1>DM-I</h1>
+                <button id="menu-toggle" class="menu-btn">☰</button>
+            </div>
+            
+            <div class="character-panel">
+                <div class="character-avatar" id="char-avatar">
+                    <span id="char-initials">?</span>
+                </div>
+                <h3 id="sidebar-char-name">Loading...</h3>
+                <p id="sidebar-char-class">-</p>
+                
+                <div class="hp-bar">
+                    <div class="hp-fill" id="hp-fill"></div>
+                    <span id="hp-text">HP: 10/10</span>
+                </div>
+                
+                <div class="quick-stats">
+                    <div class="quick-stat">
+                        <span class="label">AC</span>
+                        <span id="quick-ac" class="value">10</span>
+                    </div>
+                    <div class="quick-stat">
+                        <span class="label">LVL</span>
+                        <span id="quick-level" class="value">1</span>
+                    </div>
+                </div>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <button class="nav-btn active" data-view="chat">
+                    <span class="icon">💬</span>
+                    Adventure
+                </button>
+                <button class="nav-btn" data-view="character">
+                    <span class="icon">📊</span>
+                    Character Sheet
+                </button>
+                <button class="nav-btn" data-view="dice">
+                    <span class="icon">🎲</span>
+                    Dice Roller
+                </button>
+                <button class="nav-btn" data-view="lore">
+                    <span class="icon">📚</span>
+                    Lore & Notes
+                </button>
+            </nav>
+            
+            <div class="sidebar-footer">
+                <button id="save-story" class="btn-secondary">Save to Lore</button>
+                <button id="new-game" class="btn-text">New Character</button>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <div id="chat-view" class="view active">
+                <div class="chat-header">
+                    <h2>The Realm Awaits</h2>
+                    <div class="session-info">
+                        <span id="session-id">Session: -</span>
+                    </div>
+                </div>
+                
+                <div id="chat-messages" class="chat-messages">
+                    <div class="message system">
+                        <div class="message-content">
+                            <p>Welcome, adventurer. I am DM-I, your guide through realms of imagination. What would you like to do?</p>
+                        </div>
+                        <span class="timestamp">Now</span>
+                    </div>
+                </div>
+                
+                <div class="chat-input-area">
+                    <div class="input-actions">
+                        <button id="action-attack" class="action-btn" title="Attack">⚔️</button>
+                        <button id="action-check" class="action-btn" title="Ability Check">📋</button>
+                        <button id="action-spell" class="action-btn" title="Cast Spell">✨</button>
+                        <button id="action-skill" class="action-btn" title="Use Skill">🎯</button>
+                    </div>
+                    <div class="input-wrapper">
+                        <textarea id="message-input" placeholder="What do you do?" rows="1"></textarea>
+                        <button id="send-btn" class="send-btn">➤</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="character-view" class="view">
+                <div class="sheet-header">
+                    <h2 id="sheet-name">Character Name</h2>
+                    <p id="sheet-details">Race Class Level</p>
+                </div>
+                
+                <div class="sheet-grid">
+                    <div class="sheet-section stats-section">
+                        <h3>Ability Scores</h3>
+                        <div class="ability-scores" id="ability-scores"></div>
+                    </div>
+                    
+                    <div class="sheet-section info-section">
+                        <h3>Character Info</h3>
+                        <div class="info-grid">
+                            <div class="info-item">
+                                <label>Background</label>
+                                <span id="info-background">-</span>
+                            </div>
+                            <div class="info-item">
+                                <label>Alignment</label>
+                                <span id="info-alignment">-</span>
+                            </div>
+                            <div class="info-item">
+                                <label>Player</label>
+                                <span id="info-player">-</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="sheet-section combat-section">
+                        <h3>Combat</h3>
+                        <div class="combat-stats">
+                            <div class="combat-box">
+                                <label>Max HP</label>
+                                <input type="number" id="edit-max-hp" value="10">
+                            </div>
+                            <div class="combat-box">
+                                <label>Current HP</label>
+                                <input type="number" id="edit-hp" value="10">
+                            </div>
+                            <div class="combat-box">
+                                <label>AC</label>
+                                <input type="number" id="edit-ac" value="10">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="sheet-section features-section">
+                        <h3>Features & Traits</h3>
+                        <div class="features-list" id="features-list">
+                            <p class="placeholder">No features recorded yet...</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="sheet-actions">
+                    <button id="save-character" class="btn-primary">Save Changes</button>
+                    <button id="export-character" class="btn-secondary">Export Sheet</button>
+                </div>
+            </div>
+
+            <div id="dice-view" class="view">
+                <div class="dice-container">
+                    <h2>Dice Tower</h2>
+                    
+                    <div class="dice-display">
+                        <div id="dice-result" class="dice-result">?</div>
+                        <div id="dice-breakdown" class="dice-breakdown">Roll to begin</div>
+                    </div>
+                    
+                    <div class="dice-presets">
+                        <button class="dice-btn" data-roll="1d20">d20</button>
+                        <button class="dice-btn" data-roll="1d12">d12</button>
+                        <button class="dice-btn" data-roll="1d10">d10</button>
+                        <button class="dice-btn" data-roll="1d8">d8</button>
+                        <button class="dice-btn" data-roll="1d6">d6</button>
+                        <button class="dice-btn" data-roll="1d4">d4</button>
+                        <button class="dice-btn" data-roll="1d100">d100</button>
+                    </div>
+                    
+                    <div class="dice-custom">
+                        <input type="text" id="custom-roll" placeholder="2d6+3">
+                        <button id="roll-custom" class="btn-primary">Roll</button>
+                    </div>
+                    
+                    <div class="roll-history">
+                        <h3>Recent Rolls</h3>
+                        <ul id="roll-history-list">
+                            <li class="empty">No rolls yet...</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div id="lore-view" class="view">
+                <div class="lore-container">
+                    <h2>World Lore</h2>
+                    
+                    <div class="lore-actions">
+                        <button id="add-lore" class="btn-primary">Add Entry</button>
+                        <input type="text" id="lore-search" placeholder="Search lore...">
+                    </div>
+                    
+                    <div id="lore-entries" class="lore-entries">
+                        <p class="empty-state">No lore entries yet. Add some world building!</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div id="modal-overlay" class="modal-overlay hidden">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="modal-title">Title</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body" id="modal-body"></div>
+        </div>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,11 @@
+# Default run
+./dmi-launcher
+
+# Custom model path
+./dmi-launcher --model /path/to/model.gguf
+
+# Different port
+./dmi-launcher --port 9000 --no-browser
+
+# Server-only mode (no frontend)
+./dmi-launcher --no-browser

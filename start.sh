@@ -5,6 +5,14 @@ echo "║         DM-I Startup Script           ║"
 echo "╚═══════════════════════════════════════╝"
 echo ""
 
+
+# Check if uv is installed, if not, install it
+if ! command -v uv &> /dev/null; then
+    echo "uv not found, installing..."
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+    source $HOME/.cargo/env
+fi
+
 # Ensure directories exist
 mkdir -p models data/characters data/storyline data/chroma_db
 
@@ -109,9 +117,11 @@ echo "⏳ Waiting for servers to initialize..."
 sleep 10
 
 echo "🐍 Starting DM-I Backend on port 8000..."
+
 uv sync
 uv run main.py &
 BACKEND_PID=$!
+
 
 echo ""
 echo "✅ All services started!"
